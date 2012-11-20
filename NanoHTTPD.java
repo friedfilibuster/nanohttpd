@@ -13,8 +13,10 @@ import java.net.Socket;
 import java.net.URLEncoder;
 import java.util.Date;
 import java.util.Enumeration;
-import java.util.Vector;
-import java.util.Hashtable;
+import java.util.List;
+import java.util.ArrayList;
+import java.util.Map;
+import java.util.HashMap;
 import java.util.Locale;
 import java.util.Properties;
 import java.util.StringTokenizer;
@@ -27,7 +29,6 @@ import java.io.RandomAccessFile;
 import java.io.EOFException;
 import java.nio.channels.FileChannel;
 import java.nio.ByteBuffer;
-import java.util.List;
 import java.util.LinkedList;
 
 /**
@@ -615,7 +616,7 @@ public class NanoHTTPD
 		{
 			int matchcount = 0;
 			int matchbyte = -1;
-			Vector matchbytes = new Vector();
+			List<Integer> matchbytes = new ArrayList<Integer>();
 			for (int i=0; i<b.limit(); i++) {
 				if (b.get(i) == boundary[matchcount])
 				{
@@ -624,7 +625,7 @@ public class NanoHTTPD
 					matchcount++;
 					if (matchcount==boundary.length)
 					{
-						matchbytes.addElement(new Integer(matchbyte));
+						matchbytes.add(matchbyte);
 						matchcount = 0;
 						matchbyte = -1;
 					}
@@ -639,7 +640,7 @@ public class NanoHTTPD
 			int[] ret = new int[matchbytes.size()];
 			for (int i=0; i < ret.length; i++)
 			{
-				ret[i] = ((Integer)matchbytes.elementAt(i)).intValue();
+				ret[i] = matchbytes.get(i);
 			}
 			return ret;
 		}
@@ -723,12 +724,7 @@ public class NanoHTTPD
 			try 
 			{
 				return java.net.URLDecoder.decode(str, "UTF-8");
-			} 
-			catch (Exception e) 
-			{
-				sendError( HTTP_BADREQUEST, "BAD REQUEST: Bad percent-encoding." );
-				return null;
-			}
+			}			
 			catch( Exception e )
 			{
 				sendError( HTTP_BADREQUEST, "BAD REQUEST: Bad percent-encoding." );
@@ -1082,7 +1078,7 @@ public class NanoHTTPD
 	/**
 	 * Hashtable mapping (String)FILENAME_EXTENSION -> (String)MIME_TYPE
 	 */
-	private static Hashtable theMimeTypes = new Hashtable();
+	private static final Map<String, String> theMimeTypes = new HashMap();
 	static
 	{
 		StringTokenizer st = new StringTokenizer(
