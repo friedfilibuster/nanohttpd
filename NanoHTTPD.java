@@ -22,6 +22,9 @@ import java.util.Properties;
 import java.util.StringTokenizer;
 import java.util.TimeZone;
 
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.ThreadFactory;
 import java.io.ByteArrayOutputStream;
 import java.io.FileOutputStream;
 
@@ -236,7 +239,7 @@ public class NanoHTTPD
 					try
 					{
 						while( true )
-							new HTTPSession( myServerSocket.accept());
+							EXECUTOR.submit(new HTTPSession( myServerSocket.accept()));
 					}
 					catch ( IOException ioe )
 					{}
@@ -301,6 +304,17 @@ public class NanoHTTPD
 		try { System.in.read(); } catch( Throwable t ) {}
 	}
 
+	private static final ExecutorService EXECUTOR = Executors.newCachedThreadPool(new ThreadFactory() {
+	        private final ThreadFactory defaultThreadFactory = Executors.defaultThreadFactory();
+
+	        @Override
+	        public Thread newThread(Runnable r) {
+	            Thread t = defaultThreadFactory.newThread(r);
+	            t.setDaemon(true);
+	            return t;
+	        }
+	});
+
 	/**
 	 * Handles one session, i.e. parses the HTTP request
 	 * and returns the response.
@@ -309,10 +323,7 @@ public class NanoHTTPD
 	{
 		public HTTPSession( Socket s )
 		{
-			mySocket = s;
-			Thread t = new Thread( this );
-			t.setDaemon( true );
-			t.start();
+			mySocket = s;			
 		}
 
 		public void run()
