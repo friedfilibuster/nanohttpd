@@ -813,7 +813,7 @@ public class NanoHTTPD
 					pw.print("Content-Type: " + mime + "\r\n");
 
 				if ( header == null || header.getProperty( "Date" ) == null )
-					pw.print( "Date: " + gmtFrmt.format( new Date()) + "\r\n");
+					pw.print( "Date: " + gmtFrmt.get().format( new Date()) + "\r\n");
 
 				if ( header != null )
 				{
@@ -1151,12 +1151,14 @@ public class NanoHTTPD
 	/**
 	 * GMT date formatter
 	 */
-	private static java.text.SimpleDateFormat gmtFrmt;
-	static
-	{
-		gmtFrmt = new java.text.SimpleDateFormat( "E, d MMM yyyy HH:mm:ss 'GMT'", Locale.US);
-		gmtFrmt.setTimeZone(TimeZone.getTimeZone("GMT"));
-	}
+	private static final ThreadLocal<java.text.SimpleDateFormat> gmtFrmt = new ThreadLocal<java.text.SimpleDateFormat>() {
+		@Override
+		protected java.text.SimpleDateFormat initialValue() {
+			java.text.SimpleDateFormat sdf = new java.text.SimpleDateFormat( "E, d MMM yyyy HH:mm:ss 'GMT'", Locale.US);
+			sdf.setTimeZone(TimeZone.getTimeZone("GMT"));
+			return sdf;
+		}
+	};
 
 	/**
 	 * The distribution licence
