@@ -817,13 +817,11 @@ public class NanoHTTPD
 
 				if ( header != null )
 				{
-					Enumeration e = header.keys();
-					while ( e.hasMoreElements())
-					{
-						String key = (String)e.nextElement();
-						String value = header.getProperty( key );
-						pw.print( key + ": " + value + "\r\n");
-					}
+					for (Entry<Object, Object> e : header.entrySet()) {
+						String key = (String) e.getKey();
+						String value = (String) e.getValue();
+						pw.print(key + ": " + value + "\r\n");
+					}									
 				}
 
 				pw.print("\r\n");
