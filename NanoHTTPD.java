@@ -328,21 +328,23 @@ public class NanoHTTPD
 
 		public void run()
 		{
+			InputStream is = null;
+			BufferedReader in = null;
+			ByteArrayInputStream hbis = null;
 			try
 			{
-				InputStream is = mySocket.getInputStream();
+				is = mySocket.getInputStream();
 				if ( is == null) return;
 
 				// Read the first 8192 bytes.
 				// The full header should fit in here.
 				// Apache's default header limit is 8KB.
-				int bufsize = 8192;
-				byte[] buf = new byte[bufsize];
-				int rlen = is.read(buf, 0, bufsize);
+				final byte[] buf = new byte[8192];
+				int rlen = is.read(buf, 0, buf.length);
 				if (rlen <= 0) return;
 
 				// Create a BufferedReader for parsing the header.
-				ByteArrayInputStream hbis = new ByteArrayInputStream(buf, 0, rlen);
+				hbis = new ByteArrayInputStream(buf, 0, rlen);
 				BufferedReader hin = new BufferedReader( new InputStreamReader( hbis ));
 				Properties pre = new Properties();
 				Properties parms = new Properties();
@@ -392,10 +394,9 @@ public class NanoHTTPD
 					size = 0;
 
 				// Now read all the body and write it to f
-				buf = new byte[512];
 				while ( rlen >= 0 && size > 0 )
 				{
-					rlen = is.read(buf, 0, 512);
+					rlen = is.read(buf, 0, buf.length);
 					size -= rlen;
 					if (rlen > 0)
 						f.write(buf, 0, rlen);
@@ -407,11 +408,11 @@ public class NanoHTTPD
 
 				// Create a BufferedReader for easily reading it as string.
 				InputStream bin = new FileInputStream(f.getFD());
-				BufferedReader in = new BufferedReader( new InputStreamReader(bin));
+				in = new BufferedReader( new InputStreamReader(bin));
 
 				// If the method is POST, there may be parameters
 				// in data section, too, read it:
-				if ( method.equalsIgnoreCase( "POST" ))
+				if ( "POST".equalsIgnoreCase( method ))
 				{
 					String contentType = "";
 					String contentTypeHeader = header.getProperty("content-type");
@@ -449,8 +450,7 @@ public class NanoHTTPD
 						decodeParms( postLine, parms );
 					}
 				}
-
-				if ( method.equalsIgnoreCase( "PUT" ))
+				else if ( "PUT".equalsIgnoreCase( method ))
 					files.put("content", saveTmpFile(fbuf, 0, fbuf.limit()));
 
 				// Ok, now do the serve()
@@ -458,10 +458,7 @@ public class NanoHTTPD
 				if ( r == null )
 					sendError( HTTP_INTERNALERROR, "SERVER INTERNAL ERROR: Serve() returned a null response." );
 				else
-					sendResponse( r.status, r.mimeType, r.header, r.data );
-
-				in.close();
-				is.close();
+					sendResponse( r.status, r.mimeType, r.header, r.data );				
 			}
 			catch ( IOException ioe )
 			{
@@ -477,6 +474,27 @@ public class NanoHTTPD
 			}
 			finally
 			{
+				try {
+					if (hbis != null) {
+						hbis.close();
+					}
+				} catch (IOException ex) {
+					ex.printStackTrace(myErr);
+				}
+				try {
+					if (in != null) {
+						in.close();
+					}
+				} catch (IOException ex) {
+					ex.printStackTrace(myErr);
+				}
+				try {
+					if (is != null) {
+						is.close();
+					}
+				} catch (IOException ex) {
+					ex.printStackTrace(myErr);
+				}
 				myTmpFiles.cleanup();
 			}
 		}
@@ -871,9 +889,12 @@ public class NanoHTTPD
 				newUri += "%20";
 			else
 			{
-				newUri += URLEncoder.encode( tok );
 				// For Java 1.4 you'll want to use this instead:
-				// try { newUri += URLEncoder.encode( tok, "UTF-8" ); } catch ( java.io.UnsupportedEncodingException uee ) {}
+				try { 
+					newUri += URLEncoder.encode( tok, "UTF-8" ); 
+				} catch ( java.io.UnsupportedEncodingException uee ) {
+					uee.printStackTrace(myErr);
+				}
 			}
 		}
 		return newUri;
@@ -1007,7 +1028,7 @@ public class NanoHTTPD
 				String mime = null;
 				int dot = f.getCanonicalPath().lastIndexOf( '.' );
 				if ( dot >= 0 )
-					mime = (String)theMimeTypes.get( f.getCanonicalPath().substring( dot + 1 ).toLowerCase());
+					mime = theMimeTypes.get( f.getCanonicalPath().substring( dot + 1 ).toLowerCase());
 				if ( mime == null )
 					mime = MIME_DEFAULT_BINARY;
 
@@ -1089,7 +1110,7 @@ public class NanoHTTPD
 	/**
 	 * Hashtable mapping (String)FILENAME_EXTENSION -> (String)MIME_TYPE
 	 */
-	private static final Map<String, String> theMimeTypes = new HashMap();
+	private static final Map<String, String> theMimeTypes = new HashMap<String, String>();
 	static
 	{
 		StringTokenizer st = new StringTokenizer(
